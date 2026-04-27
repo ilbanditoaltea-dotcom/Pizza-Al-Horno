@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pizza al Horno</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <section class="game-panel" aria-label="Juego Pizza al Horno">
+        <div class="topbar">
+          <div class="brand">
+            <img
+              class="brand-logo"
+              src="./assets/logo-pizza-horno.png"
+              alt="Pizza al Horno"
+            />
+          </div>
+          <div class="stats" aria-live="polite">
+            <div>
+              <span>Pizzas</span>
+              <strong id="score">0</strong>
+            </div>
+            <div>
+              <span>Tiempo</span>
+              <strong id="time">45.0</strong>
+            </div>
+            <div>
+              <span>Récord</span>
+              <strong id="best">0</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="game" width="1280" height="720"></canvas>
+          <div class="screen-layer" id="overlay">
+            <div class="modal">
+              <p class="kicker" id="modalKicker">Listo para servir</p>
+              <h2 id="modalTitle">Lanza pizzas al horno</h2>
+              <p id="modalCopy">Toca en el momento justo. Un fallo reinicia la tanda.</p>
+              <form class="score-form is-hidden" id="scoreForm">
+                <label class="score-label" for="playerName">Nombre del ranking</label>
+                <input
+                  id="playerName"
+                  name="playerName"
+                  type="text"
+                  maxlength="18"
+                  autocomplete="nickname"
+                  placeholder="Bandito"
+                  required
+                />
+                <label class="score-label" for="playerPhone">Telefono para premio</label>
+                <input
+                  id="playerPhone"
+                  name="playerPhone"
+                  type="tel"
+                  maxlength="24"
+                  autocomplete="tel"
+                  placeholder="+34 600 000 000"
+                  required
+                />
+                <label class="score-label" for="playerEmail">Email para premio</label>
+                <input
+                  id="playerEmail"
+                  name="playerEmail"
+                  type="email"
+                  maxlength="60"
+                  autocomplete="email"
+                  placeholder="pizza@cliente.com"
+                  required
+                />
+                <p class="score-note">El ranking publico solo mostrara nombre y puntuacion.</p>
+                <button id="saveScoreButton" type="submit">Guardar puntuacion</button>
+              </form>
+              <button id="startButton" type="button">Jugar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottombar">
+          <div class="heat-meter" aria-label="Calor del horno">
+            <span id="heatFill"></span>
+          </div>
+          <div class="combo">
+            <span>Combo</span>
+            <strong id="combo">x1</strong>
+          </div>
+        </div>
+
+        <section class="leaderboard" id="publicLeaderboard" aria-label="Ranking local">
+          <div class="leaderboard-head">
+            <div>
+              <p class="leaderboard-kicker" id="leaderboardKicker">Ranking local</p>
+              <h2>Top pizzeros</h2>
+            </div>
+            <p class="leaderboard-copy" id="leaderboardIntro">
+              Primero montamos la experiencia completa aqui; luego la conectamos.
+            </p>
+          </div>
+          <div class="leaderboard-list" id="leaderboardList"></div>
+        </section>
+
+        <section class="private-board is-hidden" id="privateBoard" aria-label="Contactos privados">
+          <div class="leaderboard-head">
+            <div>
+              <p class="leaderboard-kicker">Vista privada</p>
+              <h2>Contactos del ranking</h2>
+            </div>
+          </div>
+          <div class="admin-filters" id="adminFilters">
+            <button class="admin-chip is-active" data-filter="top" type="button">Top</button>
+            <button class="admin-chip" data-filter="month" type="button">Mes</button>
+            <button class="admin-chip" data-filter="week" type="button">Sem</button>
+            <button class="admin-chip" data-filter="day" type="button">Dia</button>
+          </div>
+          <p class="leaderboard-copy">
+            Solo para maqueta local. La privacidad real y los datos compartidos entre moviles
+            llegaran cuando lo conectemos a Supabase.
+          </p>
+          <div class="private-list" id="privateList"></div>
+        </section>
+      </section>
+    </main>
+    <script src="game-config.js"></script>
+    <script src="game.js"></script>
+  </body>
+</html>
