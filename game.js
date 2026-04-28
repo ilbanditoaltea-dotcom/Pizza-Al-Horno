@@ -39,11 +39,16 @@ function getSupabaseRest() {
   return { url, key };
 }
 
-const supabaseRest = getSupabaseRest();
-const useCloud = Boolean(supabaseRest);
+let supabaseRest = getSupabaseRest();
+let useCloud = Boolean(supabaseRest);
 
 let cloudLeaderboardCache = [];
 let cloudLeaderboardReady = false;
+
+function setSupabaseRest(config) {
+  supabaseRest = config;
+  useCloud = Boolean(config);
+}
 
 function supabaseHeaders(extra = {}) {
   return {
@@ -190,6 +195,14 @@ function saveLeaderboard(entries) {
   localStorage.setItem(leaderboardKey, JSON.stringify(entries));
 }
 
+function normalizePhone(value) {
+  return String(value).replace(/[^\d+]/g, "");
+}
+
+function normalizeEmail(value) {
+  return String(value).trim().toLowerCase();
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -331,6 +344,8 @@ async function submitScore() {
   const name = (rawName || "Anonimo").slice(0, 18);
   const phone = rawPhone.slice(0, 24);
   const email = rawEmail.slice(0, 60);
+  const normalizedPhone = normalizePhone(phone);
+  const normalizedEmail = normalizeEmail(email);
   localStorage.setItem(playerNameKey, name);
   localStorage.setItem(playerPhoneKey, phone);
   localStorage.setItem(playerEmailKey, email);
@@ -366,8 +381,9 @@ async function submitScore() {
       renderLeaderboard();
       renderPrivateBoard();
       modalKicker.textContent = "Ranking actualizado";
-      modalTitle.textContent = `${name} entra al ranking`;
-      modalCopy.textContent = `Tu puntuacion de ${pendingScore} esta guardada en Supabase.`;
+      modalTitle.textContent = `${name} actualiza su mejor marca`;
+      modalCopy.textContent =
+        "Solo se conserva la mejor puntuacion de esta persona en Supabase.";
     } catch (err) {
       console.error(err);
       modalKicker.textContent = "Error al guardar";
@@ -383,16 +399,41 @@ async function submitScore() {
   }
 
   const entries = loadLeaderboard();
-  const entry = {
-    id: `score-${Date.now()}`,
-    name,
-    score: pendingScore,
-    date: getTodayLabel(),
-    phone,
-    email,
-  };
+  const existingEntry = entries.find((entry) => {
+    const entryPhone = normalizePhone(entry.phone || "");
+    const entryEmail = normalizeEmail(entry.email || "");
+    return (
+      (normalizedPhone && entryPhone === normalizedPhone) ||
+      (normalizedEmail && entryEmail === normalizedEmail)
+    );
+  });
 
-  entries.push(entry);
+  let entry;
+  let wasImproved = false;
+
+  if (existingEntry) {
+    existingEntry.name = name;
+    existingEntry.phone = phone;
+    existingEntry.email = email;
+    if (pendingScore > existingEntry.score) {
+      existingEntry.score = pendingScore;
+      existingEntry.date = getTodayLabel();
+      wasImproved = true;
+    }
+    entry = existingEntry;
+  } else {
+    entry = {
+      id: `score-${Date.now()}`,
+      name,
+      score: pendingScore,
+      date: getTodayLabel(),
+      phone,
+      email,
+    };
+    entries.push(entry);
+    wasImproved = true;
+  }
+
   entries.sort((a, b) => b.score - a.score);
   saveLeaderboard(entries.slice(0, 50));
   latestEntryId = entry.id;
@@ -400,8 +441,12 @@ async function submitScore() {
   renderPrivateBoard();
 
   modalKicker.textContent = "Ranking actualizado";
-  modalTitle.textContent = `${entry.name} entra al ranking`;
-  modalCopy.textContent = `Tu puntuacion de ${entry.score} ya esta guardada en esta version local.`;
+  modalTitle.textContent = wasImproved
+    ? `${entry.name} mejora su marca`
+    : `${entry.name} mantiene su mejor puntuacion`;
+  modalCopy.textContent = wasImproved
+    ? `Tu mejor puntuacion guardada ahora es ${entry.score}.`
+    : `Tu mejor puntuacion sigue siendo ${entry.score}. No hemos creado otra fila.`;
   pendingScore = null;
   setScoreFormVisible(false);
 }
@@ -827,6 +872,24 @@ window.addEventListener("keydown", (event) => {
 window.addEventListener("resize", resizeCanvasForDisplay);
 
 (async function bootstrap() {
+  if (!useCloud) {
+    try {
+      const res = await fetch("/api/public-config", {
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        const cfg = await res.json();
+        const url = String(cfg.url || "").trim().replace(/\/$/, "");
+        const key = String(cfg.anonKey || "").trim();
+        if (url && key) {
+          setSupabaseRest({ url, key });
+        }
+      }
+    } catch (err) {
+      console.warn("No se pudo cargar la config publica de Vercel.", err);
+    }
+  }
+
   if (useCloud) {
     try {
       cloudLeaderboardCache = await fetchCloudLeaderboard();
