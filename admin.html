@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin | Pizza al Horno</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="admin-body">
+    <main class="admin-shell">
+      <section class="admin-panel">
+        <header class="admin-header">
+          <img class="brand-logo" src="./assets/logo-pizza-horno.png" alt="Pizza al Horno" />
+          <div class="admin-header-copy">
+            <p class="leaderboard-kicker">Panel privado</p>
+            <h1>Contactos del ranking</h1>
+            <p>Acceso solo para el restaurante.</p>
+          </div>
+        </header>
+
+        <section class="admin-login-card" id="adminLoginCard">
+          <h2>Entrar</h2>
+          <p class="admin-muted">Usa tu usuario y contraseña de administración.</p>
+          <form id="adminLoginForm" class="score-form">
+            <label class="score-label" for="adminUsername">Usuario</label>
+            <input id="adminUsername" name="username" type="text" autocomplete="username" required />
+            <label class="score-label" for="adminPassword">Contraseña</label>
+            <input
+              id="adminPassword"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+            />
+            <button id="adminLoginButton" type="submit">Entrar</button>
+          </form>
+          <p class="admin-error is-hidden" id="adminLoginError"></p>
+        </section>
+
+        <section class="private-board is-hidden" id="adminBoard">
+          <div class="leaderboard-head">
+            <div>
+              <p class="leaderboard-kicker">Vista privada</p>
+              <h2>Top y contactos</h2>
+            </div>
+            <button class="admin-chip logout-chip" id="adminLogoutButton" type="button">Salir</button>
+          </div>
+          <div class="admin-filters" id="adminFilters">
+            <button class="admin-chip is-active" data-filter="top" type="button">Top</button>
+            <button class="admin-chip" data-filter="month" type="button">Mes</button>
+            <button class="admin-chip" data-filter="week" type="button">Sem</button>
+            <button class="admin-chip" data-filter="day" type="button">Dia</button>
+          </div>
+          <p class="leaderboard-copy admin-copyline" id="adminStatusCopy">
+            Cargando contactos privados...
+          </p>
+          <div class="private-list" id="adminPrivateList"></div>
+        </section>
+      </section>
+    </main>
+    <script src="admin.js"></script>
+  </body>
+</html>

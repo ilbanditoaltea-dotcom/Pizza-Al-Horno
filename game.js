@@ -16,11 +16,7 @@ const playerNameInput = document.querySelector("#playerName");
 const playerPhoneInput = document.querySelector("#playerPhone");
 const playerEmailInput = document.querySelector("#playerEmail");
 const saveScoreButton = document.querySelector("#saveScoreButton");
-const publicLeaderboard = document.querySelector("#publicLeaderboard");
 const leaderboardList = document.querySelector("#leaderboardList");
-const privateBoard = document.querySelector("#privateBoard");
-const privateList = document.querySelector("#privateList");
-const adminFilters = document.querySelector("#adminFilters");
 
 const W = canvas.width;
 const H = canvas.height;
@@ -30,7 +26,6 @@ const leaderboardKey = "pizza-oven-leaderboard";
 const playerNameKey = "pizza-oven-player-name";
 const playerPhoneKey = "pizza-oven-player-phone";
 const playerEmailKey = "pizza-oven-player-email";
-const isAdminView = new URLSearchParams(window.location.search).get("admin") === "1";
 
 function getSupabaseRest() {
   const url = String(window.SUPABASE_URL || "").trim().replace(/\/$/, "");
@@ -94,7 +89,6 @@ let throwCooldown = 0;
 let feedback = null;
 let pendingScore = null;
 let latestEntryId = null;
-let adminFilter = "top";
 
 const hand = {
   x: 190,
@@ -246,81 +240,6 @@ function renderLeaderboard() {
     .join("");
 }
 
-function renderPrivateBoard() {
-  if (!isAdminView) return;
-
-  if (useCloud) {
-    privateList.innerHTML =
-      '<div class="leaderboard-empty">Los telefonos y emails estan en Supabase en la tabla privada. Ve a Table Editor (o monta una API en Vercel con la service_role key). La clave anon del navegador no puede leerlos.</div>';
-    return;
-  }
-
-  const entries = getAdminEntries();
-
-  if (!entries.length) {
-    privateList.innerHTML = '<div class="leaderboard-empty">Todavia no hay contactos guardados.</div>';
-    return;
-  }
-
-  privateList.innerHTML = entries
-    .map(
-      (entry, index) => `
-        <div class="private-row">
-          <span class="leaderboard-rank">#${index + 1}</span>
-          <strong class="private-cell">${escapeHtml(entry.name)}</strong>
-          <span class="private-cell">${escapeHtml(entry.phone || "Sin telefono")}</span>
-          <span class="private-cell">${escapeHtml(entry.email || "Sin email")}</span>
-          <strong class="leaderboard-score">${entry.score}</strong>
-          <span class="leaderboard-date">${entry.date}</span>
-        </div>
-      `
-    )
-    .join("");
-}
-
-function getAdminEntries() {
-  const entries = loadLeaderboard().sort((a, b) => b.score - a.score);
-  if (adminFilter === "top") return entries.slice(0, 50);
-
-  const now = new Date();
-  if (adminFilter === "day") {
-    return entries.filter((entry) => entry.date === getTodayLabel()).slice(0, 50);
-  }
-
-  if (adminFilter === "week") {
-    return entries
-      .filter((entry) => {
-        if (!entry.id.startsWith("score-")) return false;
-        const createdAt = Number(entry.id.replace("score-", ""));
-        return Number.isFinite(createdAt) && now.getTime() - createdAt <= 7 * 24 * 60 * 60 * 1000;
-      })
-      .slice(0, 50);
-  }
-
-  if (adminFilter === "month") {
-    return entries
-      .filter((entry) => {
-        if (!entry.id.startsWith("score-")) return false;
-        const createdAt = Number(entry.id.replace("score-", ""));
-        if (!Number.isFinite(createdAt)) return false;
-        const createdDate = new Date(createdAt);
-        return (
-          createdDate.getFullYear() === now.getFullYear() &&
-          createdDate.getMonth() === now.getMonth()
-        );
-      })
-      .slice(0, 50);
-  }
-
-  return entries.slice(0, 50);
-}
-
-function updateAdminFilterButtons() {
-  adminFilters.querySelectorAll(".admin-chip").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.filter === adminFilter);
-  });
-}
-
 function setScoreFormVisible(visible) {
   scoreForm.classList.toggle("is-hidden", !visible);
   overlay.classList.toggle("form-mode", visible);
@@ -379,7 +298,6 @@ async function submitScore() {
       latestEntryId = newId;
       cloudLeaderboardCache = await fetchCloudLeaderboard();
       renderLeaderboard();
-      renderPrivateBoard();
       modalKicker.textContent = "Ranking actualizado";
       modalTitle.textContent = `${name} actualiza su mejor marca`;
       modalCopy.textContent =
@@ -438,7 +356,6 @@ async function submitScore() {
   saveLeaderboard(entries.slice(0, 50));
   latestEntryId = entry.id;
   renderLeaderboard();
-  renderPrivateBoard();
 
   modalKicker.textContent = "Ranking actualizado";
   modalTitle.textContent = wasImproved
@@ -854,13 +771,6 @@ scoreForm.addEventListener("submit", (event) => {
   event.preventDefault();
   void submitScore();
 });
-adminFilters.addEventListener("click", (event) => {
-  const button = event.target.closest(".admin-chip");
-  if (!button) return;
-  adminFilter = button.dataset.filter;
-  updateAdminFilterButtons();
-  renderPrivateBoard();
-});
 canvas.addEventListener("pointerdown", releasePizza);
 window.addEventListener("keydown", (event) => {
   if (event.code === "Space") {
@@ -902,20 +812,11 @@ window.addEventListener("resize", resizeCanvasForDisplay);
     if (kicker) kicker.textContent = "Ranking online";
     const intro = document.querySelector("#leaderboardIntro");
     if (intro) intro.textContent = "Ranking sincronizado con Supabase.";
-    const privateCopy = document.querySelector("#privateBoardCopy");
-    if (privateCopy) {
-      privateCopy.textContent =
-        "En modo online los contactos no se listan aqui; revisa Supabase Table Editor (tabla privada) o una API en servidor.";
-    }
   }
 
   bestEl.textContent = best;
   updateHud();
   renderLeaderboard();
-  publicLeaderboard.classList.toggle("is-hidden", isAdminView);
-  privateBoard.classList.toggle("is-hidden", !isAdminView);
-  updateAdminFilterButtons();
-  renderPrivateBoard();
   resizeCanvasForDisplay();
   requestAnimationFrame(frame);
 })();
