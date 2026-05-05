@@ -8,6 +8,7 @@ const comboEl = document.querySelector("#combo");
 const livesEl = document.querySelector("#lives");
 const heatFill = document.querySelector("#heatFill");
 const overlay = document.querySelector("#overlay");
+const modalArt = document.querySelector("#modalArt");
 const modalKicker = document.querySelector("#modalKicker");
 const modalTitle = document.querySelector("#modalTitle");
 const modalCopy = document.querySelector("#modalCopy");
@@ -248,6 +249,11 @@ function setScoreFormVisible(visible) {
   overlay.classList.toggle("form-mode", visible);
 }
 
+function setOverlayMode(mode = "default") {
+  overlay.dataset.mode = mode;
+  modalArt.classList.toggle("is-hidden", mode !== "out-of-lives");
+}
+
 function prepareScoreForm(finalScore) {
   pendingScore = finalScore;
   playerNameInput.value = localStorage.getItem(playerNameKey) || "";
@@ -404,12 +410,14 @@ function startGame() {
   pendingScore = null;
   nextStreakBonus = 10;
   resetPizza();
+  setOverlayMode("default");
   setScoreFormVisible(false);
   overlay.classList.add("is-hidden");
   updateHud();
 }
 
-function showOverlay(kicker, title, copy, buttonLabel = "Jugar otra vez") {
+function showOverlay(kicker, title, copy, buttonLabel = "Jugar otra vez", mode = "default") {
+  setOverlayMode(mode);
   modalKicker.textContent = kicker;
   modalTitle.textContent = title;
   modalCopy.textContent = copy;
@@ -445,7 +453,9 @@ function missGame() {
   showOverlay(
     "Sin vidas",
     `${score} puntos totales`,
-    "Te quedaste sin vidas. La siguiente tanda puede llegar mucho más lejos."
+    "Te quedaste sin vidas. La siguiente tanda puede llegar mucho más lejos.",
+    "Jugar otra vez",
+    "out-of-lives"
   );
 }
 
@@ -831,7 +841,7 @@ window.addEventListener("resize", resizeCanvasForDisplay);
     const kicker = document.querySelector("#leaderboardKicker");
     if (kicker) kicker.textContent = "Ranking online";
     const intro = document.querySelector("#leaderboardIntro");
-    if (intro) intro.textContent = "Ranking sincronizado con Supabase.";
+    if (intro) intro.textContent = "";
   }
 
   bestEl.textContent = best;

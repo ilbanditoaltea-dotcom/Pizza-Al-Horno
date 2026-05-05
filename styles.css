@@ -137,6 +137,7 @@ canvas {
   padding: 18px;
   background: rgba(0, 0, 0, 0.44);
   overflow: auto;
+  z-index: 12;
 }
 
 .screen-layer.is-hidden {
@@ -153,6 +154,14 @@ canvas {
   text-align: center;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.62);
   backdrop-filter: blur(10px);
+}
+
+.modal-art {
+  display: none;
+  width: min(460px, 100%);
+  height: auto;
+  margin: -8px auto 10px;
+  filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.32));
 }
 
 .kicker {
@@ -173,6 +182,41 @@ canvas {
   margin-top: 12px;
   color: var(--muted);
   line-height: 1.45;
+}
+
+.screen-layer[data-mode="out-of-lives"] .modal {
+  width: min(560px, 100%);
+  padding-top: 18px;
+}
+
+.screen-layer[data-mode="out-of-lives"] {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  place-items: start center;
+  padding: 20px 18px max(20px, env(safe-area-inset-bottom));
+}
+
+.screen-layer[data-mode="out-of-lives"] .modal-art {
+  display: block;
+}
+
+.screen-layer[data-mode="out-of-lives"] .kicker,
+.screen-layer[data-mode="out-of-lives"] #modalCopy {
+  display: none;
+}
+
+.screen-layer[data-mode="out-of-lives"] .modal h2 {
+  margin-top: 4px;
+  font-size: clamp(1.25rem, 3vw, 2rem);
+}
+
+.screen-layer[data-mode="out-of-lives"] .score-form {
+  margin-top: 18px;
+}
+
+.screen-layer[data-mode="out-of-lives"] .modal {
+  margin-top: 12px;
 }
 
 .score-form {
@@ -550,6 +594,18 @@ button:active {
   .modal {
     width: min(440px, 100%);
     padding: 18px;
+  }
+
+  .screen-layer[data-mode="out-of-lives"] .modal {
+    width: min(480px, 100%);
+    padding: 16px;
+    margin-top: 0;
+  }
+
+  .screen-layer[data-mode="out-of-lives"] .modal-art {
+    width: min(100%, 420px);
+    margin-top: -4px;
+    margin-bottom: 8px;
   }
 
   .screen-layer.form-mode .modal {
