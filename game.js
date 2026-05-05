@@ -5,6 +5,7 @@ const scoreEl = document.querySelector("#score");
 const timeEl = document.querySelector("#time");
 const bestEl = document.querySelector("#best");
 const comboEl = document.querySelector("#combo");
+const livesEl = document.querySelector("#lives");
 const heatFill = document.querySelector("#heatFill");
 const overlay = document.querySelector("#overlay");
 const modalKicker = document.querySelector("#modalKicker");
@@ -20,7 +21,7 @@ const leaderboardList = document.querySelector("#leaderboardList");
 
 const W = canvas.width;
 const H = canvas.height;
-const ROUND_SECONDS = 45;
+const ROUND_SECONDS = 60;
 const bestKey = "pizza-oven-best";
 const leaderboardKey = "pizza-oven-leaderboard";
 const playerNameKey = "pizza-oven-player-name";
@@ -82,6 +83,7 @@ let state = "ready";
 let score = 0;
 let combo = 1;
 let streak = 0;
+let lives = 3;
 let best = Number(localStorage.getItem(bestKey) || 0);
 let timeLeft = ROUND_SECONDS;
 let elapsed = 0;
@@ -89,6 +91,7 @@ let throwCooldown = 0;
 let feedback = null;
 let pendingScore = null;
 let latestEntryId = null;
+let nextStreakBonus = 10;
 
 const hand = {
   x: 190,
@@ -126,7 +129,7 @@ const oven = {
   glow: 0,
 };
 
-const comboThresholds = [0, 2, 5, 9, 14];
+const comboThresholds = [0, 3, 7, 12, 18];
 const seedLeaderboard = [
   ["Marco", 48],
   ["Noa", 45],
@@ -393,11 +396,13 @@ function startGame() {
   score = 0;
   combo = 1;
   streak = 0;
+  lives = 3;
   timeLeft = ROUND_SECONDS;
   elapsed = 0;
   oven.glow = 0;
   feedback = null;
   pendingScore = null;
+  nextStreakBonus = 10;
   resetPizza();
   setScoreFormVisible(false);
   overlay.classList.add("is-hidden");
@@ -418,21 +423,29 @@ function endGame() {
   localStorage.setItem(bestKey, String(best));
   updateHud();
   prepareScoreForm(score);
-  showOverlay("Tiempo", `${score} pizzas dentro`, "Buen servicio. Otra tanda puede batir el récord.");
+  showOverlay("Tiempo", `${score} puntos totales`, "Buen servicio. Otra tanda puede batir el récord.");
 }
 
 function missGame() {
+  lives = Math.max(0, lives - 1);
+  streak = Math.max(0, streak - 2);
+  combo = getComboFromStreak(streak);
+  updateHud();
+
+  if (lives > 0) {
+    feedback = { text: `Vida -1`, t: 0.7, good: false };
+    return;
+  }
+
   state = "missed";
   best = Math.max(best, score);
   localStorage.setItem(bestKey, String(best));
-  combo = 1;
-  streak = 0;
   updateHud();
   prepareScoreForm(score);
   showOverlay(
-    "Tiro fallado",
-    `${score} pizzas antes del fallo`,
-    "La tanda vuelve a cero. El siguiente tiro puede salir fino."
+    "Sin vidas",
+    `${score} puntos totales`,
+    "Te quedaste sin vidas. La siguiente tanda puede llegar mucho más lejos."
   );
 }
 
@@ -441,6 +454,7 @@ function updateHud() {
   timeEl.textContent = timeLeft.toFixed(1);
   bestEl.textContent = best;
   comboEl.textContent = `x${combo}`;
+  livesEl.textContent = lives;
   heatFill.style.width = `${clamp((score / 18) * 100, 7, 100)}%`;
 }
 
@@ -475,17 +489,23 @@ function scoreHit() {
   const previousCombo = combo;
   combo = getComboFromStreak(streak);
   oven.glow = 1;
-  feedback = {
-    text: combo > previousCombo ? `x${combo}` : combo > 1 ? "Racha" : "Dentro",
-    t: 0.7,
-    good: true,
-  };
+
+  if (streak >= nextStreakBonus) {
+    timeLeft += 30;
+    nextStreakBonus += 10;
+    feedback = { text: "+30s", t: 0.9, good: true };
+  } else {
+    feedback = {
+      text: combo > previousCombo ? `x${combo}` : combo > 1 ? "Racha" : "Dentro",
+      t: 0.7,
+      good: true,
+    };
+  }
   resetPizza();
   updateHud();
 }
 
 function scoreMiss() {
-  feedback = { text: "Fuera", t: 0.45, good: false };
   resetPizza();
   missGame();
 }
@@ -692,17 +712,17 @@ function drawFeedback() {
 
 function update(delta) {
   elapsed += delta;
-  const scoreBoost = clamp(score * 0.028, 0, 1.55);
-  const comboBoost = (combo - 1) * 0.22;
-  const waveBoost = Math.sin(elapsed * (1.2 + combo * 0.22)) * (0.18 + scoreBoost * 0.08);
+  const scoreBoost = clamp(score * 0.008, 0, 0.85);
+  const comboBoost = (combo - 1) * 0.1;
+  const waveBoost = Math.sin(elapsed * (1.05 + combo * 0.12)) * (0.12 + scoreBoost * 0.05);
   const motionSpeed = hand.speed + scoreBoost + comboBoost + waveBoost;
-  const verticalRange = 172 + combo * 7 + Math.min(score, 14) * 1.8;
+  const verticalRange = 166 + combo * 4 + Math.min(score, 40) * 0.45;
 
   hand.phase += delta * motionSpeed;
   hand.y =
     H * 0.5 +
     Math.sin(hand.phase) * verticalRange +
-    Math.sin(hand.phase * (1.85 + combo * 0.06)) * (26 + combo * 3);
+    Math.sin(hand.phase * (1.72 + combo * 0.04)) * (20 + combo * 2);
   throwCooldown = Math.max(0, throwCooldown - delta);
   oven.glow = Math.max(0, oven.glow - delta * 1.6);
 
