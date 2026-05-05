@@ -95,6 +95,7 @@ let feedback = null;
 let pendingScore = null;
 let latestEntryId = null;
 let nextStreakBonus = 10;
+let isSubmittingScore = false;
 
 const hand = {
   x: 190,
@@ -272,9 +273,21 @@ function prepareScoreForm(finalScore) {
   setScoreFormVisible(finalScore > 0);
 }
 
-async function submitScore() {
-  if (!pendingScore || pendingScore <= 0) return;
+function hasPrefilledPlayerContact() {
+  return Boolean(playerPhoneInput.value.trim() && playerEmailInput.value.trim());
+}
 
+async function submitScore() {
+  if (!pendingScore || pendingScore <= 0) return true;
+  if (isSubmittingScore) return false;
+  if (!scoreForm.reportValidity()) {
+    modalKicker.textContent = "Falta guardar";
+    modalTitle.textContent = `${pendingScore} puntos pendientes`;
+    modalCopy.textContent = "Completa telefono y email para no perder esta mejor puntuacion.";
+    return false;
+  }
+
+  isSubmittingScore = true;
   const rawName = playerNameInput.value.trim();
   const rawPhone = playerPhoneInput.value.trim();
   const rawEmail = playerEmailInput.value.trim();
@@ -286,9 +299,10 @@ async function submitScore() {
   localStorage.setItem(playerNameKey, name);
   localStorage.setItem(playerPhoneKey, phone);
   localStorage.setItem(playerEmailKey, email);
+  saveScoreButton.disabled = true;
+  startButton.disabled = true;
 
   if (useCloud) {
-    saveScoreButton.disabled = true;
     try {
       const res = await fetch(`${supabaseRest.url}/rest/v1/rpc/submit_leaderboard_entry`, {
         method: "POST",
@@ -314,8 +328,6 @@ async function submitScore() {
         }
       }
       latestEntryId = newId;
-      cloudLeaderboardCache = await fetchCloudLeaderboard();
-      renderLeaderboard();
       modalKicker.textContent = "Ranking actualizado";
       modalTitle.textContent = `${name} actualiza su mejor marca`;
       modalCopy.textContent =
@@ -326,12 +338,22 @@ async function submitScore() {
       modalTitle.textContent = "No se pudo enviar la puntuacion";
       modalCopy.textContent = String(err.message || err).slice(0, 240);
       saveScoreButton.disabled = false;
-      return;
+      startButton.disabled = false;
+      isSubmittingScore = false;
+      return false;
+    }
+    try {
+      cloudLeaderboardCache = await fetchCloudLeaderboard();
+      renderLeaderboard();
+    } catch (err) {
+      console.warn("La puntuacion se guardo, pero no se pudo refrescar el ranking al momento.", err);
     }
     pendingScore = null;
     setScoreFormVisible(false);
     saveScoreButton.disabled = false;
-    return;
+    startButton.disabled = false;
+    isSubmittingScore = false;
+    return true;
   }
 
   const entries = loadLeaderboard();
@@ -384,6 +406,15 @@ async function submitScore() {
     : `Tu mejor puntuacion sigue siendo ${entry.score}. No hemos creado otra fila.`;
   pendingScore = null;
   setScoreFormVisible(false);
+  saveScoreButton.disabled = false;
+  startButton.disabled = false;
+  isSubmittingScore = false;
+  return true;
+}
+
+async function tryAutoSubmitPendingScore() {
+  if (!pendingScore || !hasPrefilledPlayerContact()) return;
+  await submitScore();
 }
 
 function resizeCanvasForDisplay() {
@@ -468,6 +499,7 @@ function endGame() {
   updateHud();
   prepareScoreForm(score);
   showOverlay("Tiempo", `${score} puntos totales`, "Buen servicio. Otra tanda puede batir el récord.");
+  void tryAutoSubmitPendingScore();
 }
 
 function missGame() {
@@ -493,6 +525,7 @@ function missGame() {
     "Jugar otra vez",
     "out-of-lives"
   );
+  void tryAutoSubmitPendingScore();
 }
 
 function updateHud() {
@@ -824,7 +857,13 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-startButton.addEventListener("click", startGame);
+startButton.addEventListener("click", async () => {
+  if (pendingScore && pendingScore > 0) {
+    const saved = await submitScore();
+    if (!saved || pendingScore) return;
+  }
+  startGame();
+});
 scoreForm.addEventListener("submit", (event) => {
   event.preventDefault();
   void submitScore();
