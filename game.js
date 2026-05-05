@@ -23,6 +23,8 @@ const leaderboardList = document.querySelector("#leaderboardList");
 const W = canvas.width;
 const H = canvas.height;
 const ROUND_SECONDS = 60;
+const prefersCoarsePointer = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+const isLowerPowerDevice = prefersCoarsePointer || (navigator.hardwareConcurrency || 8) <= 4;
 const bestKey = "pizza-oven-best";
 const leaderboardKey = "pizza-oven-leaderboard";
 const playerNameKey = "pizza-oven-player-name";
@@ -106,6 +108,13 @@ catImage.src = "./assets/cat-chef.png";
 
 const ovenImage = new Image();
 ovenImage.src = "./assets/oven-bandito.png";
+
+let catSprite = null;
+let ovenSprite = null;
+const CAT_DRAW_WIDTH = 330;
+const CAT_DRAW_X = -168;
+let catDrawHeight = 0;
+let catDrawY = 0;
 
 let pizza = {
   active: false,
@@ -378,10 +387,37 @@ async function submitScore() {
 }
 
 function resizeCanvasForDisplay() {
-  const ratio = window.devicePixelRatio || 1;
+  const deviceRatio = window.devicePixelRatio || 1;
+  const ratio = Math.min(deviceRatio, isLowerPowerDevice ? 1.25 : 1.75);
   canvas.width = Math.round(W * ratio);
   canvas.height = Math.round(H * ratio);
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = isLowerPowerDevice ? "medium" : "high";
+}
+
+function buildSpriteCache(image, width, height) {
+  if (!image.complete || image.naturalWidth <= 0 || image.naturalHeight <= 0) return null;
+  const sprite = document.createElement("canvas");
+  sprite.width = Math.max(1, Math.round(width));
+  sprite.height = Math.max(1, Math.round(height));
+  const spriteCtx = sprite.getContext("2d");
+  spriteCtx.imageSmoothingEnabled = true;
+  spriteCtx.imageSmoothingQuality = "high";
+  spriteCtx.drawImage(image, 0, 0, sprite.width, sprite.height);
+  return sprite;
+}
+
+function refreshSpriteCaches() {
+  if (catImage.complete && catImage.naturalWidth > 0) {
+    catDrawHeight = (catImage.naturalHeight / catImage.naturalWidth) * CAT_DRAW_WIDTH;
+    catDrawY = -catDrawHeight * 0.55;
+    catSprite = buildSpriteCache(catImage, CAT_DRAW_WIDTH, catDrawHeight);
+  }
+
+  if (ovenImage.complete && ovenImage.naturalWidth > 0) {
+    ovenSprite = buildSpriteCache(ovenImage, oven.w, oven.h);
+  }
 }
 
 function resetPizza() {
@@ -555,12 +591,14 @@ function drawBackground() {
 }
 
 function drawOven() {
-  if (ovenImage.complete && ovenImage.naturalWidth > 0) {
+  if (ovenSprite || (ovenImage.complete && ovenImage.naturalWidth > 0)) {
     ctx.save();
-    ctx.shadowColor = "rgba(0, 0, 0, 0.34)";
-    ctx.shadowBlur = 26;
-    ctx.shadowOffsetY = 12;
-    ctx.drawImage(ovenImage, oven.x, oven.y, oven.w, oven.h);
+    if (!isLowerPowerDevice) {
+      ctx.shadowColor = "rgba(0, 0, 0, 0.34)";
+      ctx.shadowBlur = 26;
+      ctx.shadowOffsetY = 12;
+    }
+    ctx.drawImage(ovenSprite || ovenImage, oven.x, oven.y, oven.w, oven.h);
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
 
@@ -607,27 +645,17 @@ function drawHand() {
   ctx.save();
   ctx.translate(hand.x, hand.y);
 
-  if (catImage.complete && catImage.naturalWidth > 0) {
-    ctx.shadowColor = "rgba(0, 0, 0, 0.32)";
-    ctx.shadowBlur = 24;
-    ctx.shadowOffsetY = 10;
-    const sourceX = 0;
-    const sourceY = 0;
-    const sourceWidth = catImage.naturalWidth;
-    const sourceHeight = catImage.naturalHeight;
-    const drawWidth = 330;
-    const drawHeight = (sourceHeight / sourceWidth) * drawWidth;
-    ctx.drawImage(
-      catImage,
-      sourceX,
-      sourceY,
-      sourceWidth,
-      sourceHeight,
-      -168,
-      -drawHeight * 0.55,
-      drawWidth,
-      drawHeight
-    );
+  if (catSprite || (catImage.complete && catImage.naturalWidth > 0)) {
+    if (!isLowerPowerDevice) {
+      ctx.shadowColor = "rgba(0, 0, 0, 0.32)";
+      ctx.shadowBlur = 24;
+      ctx.shadowOffsetY = 10;
+    }
+    if (!catDrawHeight && catImage.naturalWidth > 0) {
+      catDrawHeight = (catImage.naturalHeight / catImage.naturalWidth) * CAT_DRAW_WIDTH;
+      catDrawY = -catDrawHeight * 0.55;
+    }
+    ctx.drawImage(catSprite || catImage, CAT_DRAW_X, catDrawY, CAT_DRAW_WIDTH, catDrawHeight);
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
   } else {
@@ -810,6 +838,8 @@ window.addEventListener("keydown", (event) => {
   }
 });
 window.addEventListener("resize", resizeCanvasForDisplay);
+catImage.addEventListener("load", refreshSpriteCaches);
+ovenImage.addEventListener("load", refreshSpriteCaches);
 
 (async function bootstrap() {
   if (!useCloud) {
@@ -847,6 +877,7 @@ window.addEventListener("resize", resizeCanvasForDisplay);
   bestEl.textContent = best;
   updateHud();
   renderLeaderboard();
+  refreshSpriteCaches();
   resizeCanvasForDisplay();
   requestAnimationFrame(frame);
 })();
