@@ -32,6 +32,35 @@ body {
     sans-serif;
 }
 
+.welcome-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 141, 45, 0.24), transparent 28rem),
+    rgba(6, 5, 5, 0.96);
+  transition:
+    opacity 500ms ease,
+    visibility 500ms ease;
+}
+
+.welcome-splash.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.welcome-splash-image {
+  display: block;
+  width: min(100%, 560px);
+  max-height: calc(100vh - 32px);
+  object-fit: contain;
+  filter: drop-shadow(0 24px 46px rgba(0, 0, 0, 0.48));
+}
+
 button,
 canvas {
   -webkit-tap-highlight-color: transparent;
@@ -562,6 +591,15 @@ button:active {
 @media (max-width: 720px) {
   .game-shell {
     padding: 10px;
+  }
+
+  .welcome-splash {
+    padding: 10px;
+  }
+
+  .welcome-splash-image {
+    width: min(100%, 480px);
+    max-height: calc(100vh - 20px);
   }
 
   .topbar {

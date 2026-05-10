@@ -7,6 +7,7 @@ const bestEl = document.querySelector("#best");
 const comboEl = document.querySelector("#combo");
 const livesEl = document.querySelector("#lives");
 const heatFill = document.querySelector("#heatFill");
+const welcomeSplash = document.querySelector("#welcomeSplash");
 const overlay = document.querySelector("#overlay");
 const modalArt = document.querySelector("#modalArt");
 const modalKicker = document.querySelector("#modalKicker");
@@ -23,6 +24,7 @@ const leaderboardList = document.querySelector("#leaderboardList");
 const W = canvas.width;
 const H = canvas.height;
 const ROUND_SECONDS = 60;
+const WELCOME_SPLASH_MS = 5000;
 const prefersCoarsePointer = window.matchMedia?.("(pointer: coarse)").matches ?? false;
 const isLowerPowerDevice = prefersCoarsePointer || (navigator.hardwareConcurrency || 8) <= 4;
 const bestKey = "pizza-oven-best";
@@ -262,6 +264,11 @@ function setScoreFormVisible(visible) {
 function setOverlayMode(mode = "default") {
   overlay.dataset.mode = mode;
   modalArt.classList.toggle("is-hidden", mode !== "out-of-lives");
+}
+
+function hideWelcomeSplash() {
+  if (!welcomeSplash || welcomeSplash.classList.contains("is-hidden")) return;
+  welcomeSplash.classList.add("is-hidden");
 }
 
 function prepareScoreForm(finalScore) {
@@ -918,5 +925,6 @@ ovenImage.addEventListener("load", refreshSpriteCaches);
   renderLeaderboard();
   refreshSpriteCaches();
   resizeCanvasForDisplay();
+  window.setTimeout(hideWelcomeSplash, WELCOME_SPLASH_MS);
   requestAnimationFrame(frame);
 })();
